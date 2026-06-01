@@ -1,25 +1,22 @@
 package config
 
 import (
-	// Standard library
 	"fmt"
 	"log"
 	"os"
+	"time"
 
-	// Third-party
 	"github.com/joho/godotenv"
-	"gorm.io/driver/postgres" // Kept because we use lowercase postgres.Open below
+	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
 var DB *gorm.DB
 
 func ConnectDB() {
-	// Removed the unnecessary semicolon (Go doesn't require them)
-	err := godotenv.Load() 
 
-	if err != nil {
-		log.Fatal("Error loading .env file")
+	if err := godotenv.Load(); err != nil {
+		log.Println(".env file not found, using system environment variables")
 	}
 
 	host := os.Getenv("DB_HOST")
@@ -27,6 +24,10 @@ func ConnectDB() {
 	user := os.Getenv("DB_USER")
 	password := os.Getenv("DB_PASSWORD")
 	dbName := os.Getenv("DB_NAME")
+
+	if host == "" || user == "" || dbName == "" {
+		log.Fatal("Database configuration missing")
+	}
 
 	dsn := fmt.Sprintf(
 		"host=%s user=%s password=%s dbname=%s port=%s sslmode=disable",
@@ -37,15 +38,32 @@ func ConnectDB() {
 		port,
 	)
 
-	// FIX: Changed Postgres.Open to postgres.Open 
-	// FIX: Changed &gorm.Config() to &gorm.Config{}
-	database, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	log.Println("dsn : ", dsn)
 
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
-		log.Fatal("Failed to connect database")
+		log.Fatalf("Failed to connect database: %v", err)
 	}
 
-	fmt.Println("Database connected successfully")
+	sqlDB, err := db.DB()
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	DB = database
+	if err := sqlDB.Ping(); err != nil {
+		log.Fatalf("Database ping failed: %v", err)
+	}
+
+	sqlDB.SetMaxOpenConns(25)
+	sqlDB.SetMaxIdleConns(10)
+	sqlDB.SetConnMaxLifetime(time.Hour)
+
+	log.Println("Database connected successfully")
+	/*
+		if err := DB.AutoMigrate(&model.User{}); err != nil {
+			log.Fatal(err)
+		}
+	*/
+
+	DB = db
 }

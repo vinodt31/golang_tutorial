@@ -2,18 +2,24 @@ package service
 
 import (
 	"errors"
+	"strings"
+
 	"golang-crud/model"
 	"golang-crud/repository"
 )
 
-func CreateUser (user *model.User) error {
+func CreateUser(user *model.User) error {
 
-	if user.Name == "" {
-	return errors.New("name is required")
+	if strings.TrimSpace(user.Name) == "" {
+		return errors.New("name is required")
 	}
 
-	if user.Email == "" {
-	return errors.New("email is required")
+	if strings.TrimSpace(user.Email) == "" {
+		return errors.New("email is required")
+	}
+
+	if !strings.Contains(user.Email, "@") {
+		return errors.New("invalid email")
 	}
 
 	return repository.CreateUser(user)

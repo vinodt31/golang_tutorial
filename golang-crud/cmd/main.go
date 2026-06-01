@@ -2,30 +2,28 @@ package main
 
 import (
 	"golang-crud/config"
-	"golang-crud/model"
 	"golang-crud/routes"
 	"log"
-
-	"github.com/gin-gonic/gin"
+	"net/http"
+	"time"
 )
 
 func main() {
+
 	config.ConnectDB()
 
-	sqlDB, err := config.DB.DB()
-	if err != nil {
-		log.Fatal(err)
+	routes.SetupRoutes()
+
+	server := &http.Server{
+		Addr:         ":8080",
+		ReadTimeout:  5 * time.Second,
+		WriteTimeout: 10 * time.Second,
+		IdleTimeout:  60 * time.Second,
 	}
 
-	defer sqlDB.Close()
+	log.Println("Server started on :8080")
 
-	config.DB.AutoMigrate(&model.User{})
-
-	router := gin.Default()
-
-	routes.SetupRoutes(router)
-
-	if err := router.Run(":8080"); err != nil {
+	if err := server.ListenAndServe(); err != nil {
 		log.Fatal(err)
 	}
 }
